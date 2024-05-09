@@ -1,85 +1,87 @@
-const express = require('express');
-const inquirer = require('inquirer');
+const { prompt } = require('inquirer');
 const path = require('path');
-const { Pool } = require('pg');
+const db = require('./db');
+const { debug } = require('console');
 
-const PORT = process.env.PORT || 3001;
-
-const app = express();
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-const pool = new Pool(
-    {
-      // TODO: Enter PostgreSQL username
-      user: 'postgres',
-      // TODO: Enter PostgreSQL password
-      password: 'password',
-      host: 'localhost',
-      database: 'employee_db'
-    },
-    console.log(`Connected to the employee_db database.`)
-  )
-  
-pool.connect();
-
-const questions = [
+console.log('----------Employee Tracker----------') // Added for CLI styling during prompts
+function init() {
+    prompt([
+// const questions = [
     {
         type: 'list',
         name: 'options',
         message: 'What would you like to do?',
-        choices: ['Add Employee', 'Update Employee Role', 'View All Roles', 'Add Role', 'View All Departments', 'Add Department', 'Quit'],
-        default: 'Add Employee',
+        choices: [
+            {
+                name:'View All Employee',
+                value: 'VIEW_ALL_EMPLOYEE',
+            },
+            {
+                name:'Add Employee',
+                value: 'ADD_EMPLOYEE',
+            },
+            {   name: 'Update Employee Role',
+                value: 'UPDATE_EMPLOYEE_ROLE',
+            },
+            {
+                name: 'View All Roles',
+                value: 'VIEW_ALL_ROLES',
+            },  
+            {
+                name: 'Add Role',
+                value: 'ADD_ROLE',
+            },  
+            {
+                name: 'View All Departments',
+                value: 'VIEW_ALL_DEPARTMENTS',
+            },   
+            {
+                name: 'Add Department',
+                value: 'ADD_DEPARTMENT',
+            }, 
+            {
+                name: 'Quit',
+                value: 'QUIT',
+            }, 
+        ],
     },
-]
-
-// Create an Employee
-app.post('/api/:employee_id', ({ body }, res) => {
-    const sql = `INSERT INTO employees (employee_name)
-      VALUES ($1)`;
-    const params = [body.employee_name];
-  
-    pool.query(sql, params, (err, result) => {
-      if (err) {
-        res.status(400).json({ error: err.message });
-        return;
-      }
-      res.json({
-        message: 'success',
-        data: body
-      });
-    });
-  });
-
-// ADD REMAINING GET FUNCTIONS BELOW
-
-
-
-// Default response for any other request (Not Found)
-app.use((req, res) => {
-    res.status(404).end();
+]).then((answers)=>{
+    let option = answers.options;
+    switch (option) {
+        case 'VIEW_ALL_EMPLOYEE':
+            viewAllEmployee();
+            break;
+        case 'ADD_EMPLOYEE':
+            addEmployee();
+            break;
+        case 'UPDATE_EMPLOYEE_ROLE':
+            updateEmployee();
+            break;
+        case 'VIEW_ALL_ROLES':
+            viewRoles();
+            break;
+        case 'ADD_ROLE':
+            addRole();
+            break;
+        case 'VIEW_ALL_DEPARTMENTS':
+            viewDepartments();
+            break;
+        case 'ADD_DEPARTMENT':
+            addDepartment();
+            break;
+        default:
+            quit();
+    }
 });
+};
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-
-console.log('----------Employee Tracker----------') // Added for CLI styling during prompts
-function init() {
-    inquirer
-    .prompt(questions)
-    .then((answers) => {
-        
+function viewAllEmployee() {
+    db.findAllEmployees()
+    .then(({rows}) => {
+        let employees = rows;
+        console.table(employees);
     })
-    .catch((error) => {
-        if (error.isTtyError) {
-            console.log('Error with current environment'); // Prompt couldn't be rendered in the current environment
-        } else {
-            console.log(error);
-            console.log('Something went wrong.'); // Something else went wrong
-        }
-    });
+    .then(() => init())
 }
 
 // Function call to intialize app
